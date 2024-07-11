@@ -2,11 +2,13 @@ package nv.nam.screencastingwebrtc
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioRecord
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -68,17 +70,32 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
             Log.i(TAG, "onCreate: stop")
         }
         WebrtcService.listener = this
+        WebrtcService.surfaceView = binding!!.surfaceView
         webrtcServiceRepository.startIntent(streamId)
+    }
+
+    private val screenCaptureLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        Log.i(TAG, "screenCaptureLauncher: ${result.resultCode}")
+        if (result.resultCode == RESULT_OK) {
+            val intentData = result.data
+            Log.i(TAG, "Screen capture permission granted")
+
+            WebrtcService.screenPermissionIntent = intentData
+            webrtcServiceRepository.requestConnection(streamId)
+        } else {
+            Log.i(TAG, "Screen capture permission denied")
+        }
     }
 
     private fun startScreenCapture() {
         val mediaProjectionManager = application.getSystemService(
             Context.MEDIA_PROJECTION_SERVICE
         ) as MediaProjectionManager
+        Log.i(TAG, "startScreenCapture: ")
 
-        startActivityForResult(
-            mediaProjectionManager.createScreenCaptureIntent(), REQUEST_SCREEN_CAPTURE
-        )
+        screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
     }
 
     override fun onConnectionRequestReceived(target: String) {

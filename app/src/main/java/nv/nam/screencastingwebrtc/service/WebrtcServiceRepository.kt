@@ -21,10 +21,9 @@ class WebrtcServiceRepository(
         Log.i("WebrtcServiceRepository", "init: ")
     }
 
-
     fun startIntent(streamId: String) {
         CoroutineScope(Dispatchers.IO).launch {
-            val startIntent = Intent(context, WebrtcServiceRepository::class.java)
+            val startIntent = Intent(context, WebrtcService::class.java)
             startIntent.action = "StartIntent"
             startIntent.putExtra("streamId", streamId)
             Log.i("WebrtcServiceRepository", "startIntent: $streamId")
@@ -35,7 +34,7 @@ class WebrtcServiceRepository(
 
     fun requestConnection(target: String) {
         val thread = Thread {
-            val startIntent = Intent(context, WebrtcServiceRepository::class.java)
+            val startIntent = Intent(context, WebrtcService::class.java)
             startIntent.action = "RequestConnectionIntent"
             startIntent.putExtra("target", target)
             context.startForegroundService(startIntent)
@@ -45,7 +44,7 @@ class WebrtcServiceRepository(
 
     fun acceptCAll(target: String) {
         val thread = Thread {
-            val startIntent = Intent(context, WebrtcServiceRepository::class.java)
+            val startIntent = Intent(context, WebrtcService::class.java)
             startIntent.action = "AcceptCallIntent"
             startIntent.putExtra("target", target)
             context.startForegroundService(startIntent)
@@ -55,7 +54,7 @@ class WebrtcServiceRepository(
 
     fun endCallIntent() {
         val thread = Thread {
-            val startIntent = Intent(context, WebrtcServiceRepository::class.java)
+            val startIntent = Intent(context, WebrtcService::class.java)
             startIntent.action = "EndCallIntent"
             context.startForegroundService(startIntent)
         }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import nv.nam.screencastingwebrtc.BuildConfig
 import nv.nam.screencastingwebrtc.utils.DataModel
 import nv.nam.screencastingwebrtc.utils.DataModelType
 import org.java_websocket.client.WebSocketClient
@@ -28,13 +29,16 @@ class ClientSocket(
         private var webSocket: WebSocketClient? = null
     }
 
+    init {
+        Log.i("ClientSocket", "init: ")
+    }
+
     var listener: Listener? = null
     fun init(streamID: String) {
         this.streamId = streamID
-        Log.i("SOCKET", "init: ")
-        webSocket = object : WebSocketClient(URI("ws://10.10.11.30:3000")) {
+        val url = BuildConfig.SERVER_IP
+        webSocket = object : WebSocketClient(URI(url)) {
             override fun onOpen(handshakedata: ServerHandshake?) {
-                Log.i("SOCKET", "onOpen: ")
                 sendMessageToSocket(
                     DataModel(
                         streamId = streamID, DataModelType.SignIn, null, null
@@ -63,7 +67,6 @@ class ClientSocket(
 
             override fun onError(ex: Exception?) {
             }
-
         }
         webSocket?.connect()
     }

@@ -27,7 +27,7 @@ class MainRepository(
     private val gson: Gson
 ) : ClientSocket.Listener, WebrtcClient.Listener {
     init {
-
+        Log.i("MainRepository", "init: ")
     }
     private lateinit var streamId: String
     private lateinit var target: String

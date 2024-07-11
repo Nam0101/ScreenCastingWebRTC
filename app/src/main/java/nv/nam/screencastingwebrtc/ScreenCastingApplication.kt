@@ -31,30 +31,29 @@ class ScreenCastingApplication : Application() {
             modules(module)
         }
     }
+    private val module = module {
+        factory {
+            ClientSocket(get())
+            Log.i("Koin", "Debug init ClientSocket:")
+        }
+        factory<Gson> {
+            Gson()
+        }
+        factory<WebrtcClient> {
+            WebrtcClient(get(), get())
+        }
+        factory<WebrtcServiceRepository> {
+            WebrtcServiceRepository(androidContext())
+        }
+        factory<ClientSocket> {
+            ClientSocket(get())
+        }
+        factory<WebrtcService> {
+            WebrtcService()
+        }
+        factory<MainRepository> {
+            MainRepository(get(), get(), get())
+        }
+    }
 }
 
-val module = module {
-    factory {
-        ClientSocket(get())
-        Log.i("Koin", "Debug init ClientSocket:")
-    }
-    factory {
-        Gson()
-        Log.i("Koin", "Debug init Gson:")
-    }
-    factory {
-        WebrtcClient(get(), get())
-        Log.i("Koin", "Debug init WebrtcClient:")
-    }
-    factory<WebrtcServiceRepository> {
-        WebrtcServiceRepository(androidContext())
-    }
-    factory {
-        WebrtcService()
-        Log.i("Koin", "Debug init WebrtcService:")
-    }
-    factory {
-        MainRepository(get(), get(), get())
-        Log.i("Koin", "Debug init MainRepository:")
-    }
-}

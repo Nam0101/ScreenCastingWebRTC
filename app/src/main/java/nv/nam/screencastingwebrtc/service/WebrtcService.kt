@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import nv.nam.screencastingwebrtc.R
 import nv.nam.screencastingwebrtc.repository.MainRepository
@@ -26,6 +27,9 @@ class WebrtcService : Service(), MainRepository.Listener,KoinComponent {
         var surfaceView: SurfaceViewRenderer? = null
         var listener: MainRepository.Listener? = null
     }
+    init {
+        Log.i("WebrtcService", "init: ")
+    }
 
     private val mainRepository: MainRepository  by inject()
 
@@ -44,7 +48,7 @@ class WebrtcService : Service(), MainRepository.Listener,KoinComponent {
         if (intent != null) {
             when (intent.action) {
                 "StartIntent" -> {
-                    this.streamId = intent.getStringExtra("username").toString()
+                    this.streamId = intent.getStringExtra("streamId").toString()
                     mainRepository.init(streamId, surfaceView!!)
                     startServiceWithNotification()
                 }
@@ -69,6 +73,10 @@ class WebrtcService : Service(), MainRepository.Listener,KoinComponent {
                 "RequestConnectionIntent" -> {
                     val target = intent.getStringExtra("target")
                     target?.let {
+                        Log.i("WebrtcService", "onStartCommand: $it")
+                        if(screenPermissionIntent == null){
+                            Log.i("WebrtcService", "onStartCommand: screenPermissionIntent is null")
+                        }
                         mainRepository.setPermissionIntentToWebrtcClient(screenPermissionIntent!!)
                         mainRepository.startScreenCapturing(surfaceView!!)
                         mainRepository.sendScreenShareConnection(it)
@@ -95,6 +103,8 @@ class WebrtcService : Service(), MainRepository.Listener,KoinComponent {
             NotificationCompat.Builder(this, "channel1").setSmallIcon(R.mipmap.ic_launcher)
 
         startForeground(1, notification.build())
+
+        Log.i("WebrtcService", "startServiceWithNotification: ")
 
     }
 
