@@ -1,9 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-    //ksp
-    id("com.google.devtools.ksp") version "2.0.0-1.0.22"
+
 }
+
 
 
 android {
@@ -18,6 +18,7 @@ android {
         versionName = "1.0.0 SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SERVER_IP", "\"\"")
     }
 
     buildTypes {
@@ -36,6 +37,12 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true
+    }
+
+
 }
 
 dependencies {
@@ -52,5 +59,7 @@ dependencies {
     implementation(libs.webrtc)
     implementation(libs.gson)
     implementation(libs.java.websocket)
-    implementation(libs.koin.android)
+
+    // koin
+    implementation(libs.koin.android.v343)
 }
