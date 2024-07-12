@@ -33,6 +33,7 @@ class WebrtcServiceRepository(
     }
 
     fun requestConnection(target: String) {
+        Log.i("WebrtcServiceRepository", "requestConnection: $target")
         val thread = Thread {
             val startIntent = Intent(context, WebrtcService::class.java)
             startIntent.action = "RequestConnectionIntent"

@@ -152,7 +152,7 @@ class MainRepository(
             DataModelType.ViewerJoined -> {
                 Log.i("MainRepository", "onNewMessageReceived: ViewerJoined")
                 val viewerId = model.target.toString()
-                webrtcClient.answer(viewerId)
+                webrtcClient.call(viewerId)
             }
 
             else -> Unit
