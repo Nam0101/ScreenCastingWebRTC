@@ -34,7 +34,6 @@ class ScreenCastingApplication : Application() {
     private val module = module {
         factory {
             ClientSocket(get())
-            Log.i("Koin", "Debug init ClientSocket:")
         }
         factory<Gson> {
             Gson()

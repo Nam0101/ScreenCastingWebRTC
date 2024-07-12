@@ -114,7 +114,6 @@ class MainRepository(
         Log.i("MainRepository", "onNewMessageReceived: $model")
         when (model.type) {
             DataModelType.StartStreaming -> {
-//                this.target = model.streamId.toString()
                 model.streamId?.let { listener?.onConnectionRequestReceived(it) }
             }
 
@@ -151,8 +150,9 @@ class MainRepository(
                 }
             }
             DataModelType.ViewerJoined -> {
+                Log.i("MainRepository", "onNewMessageReceived: ViewerJoined")
                 val viewerId = model.target.toString()
-                webrtcClient.call(viewerId)
+                webrtcClient.answer(viewerId)
             }
 
             else -> Unit
