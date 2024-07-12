@@ -9,7 +9,7 @@ package nv.nam.screencastingwebrtc.utils
  */
 
 enum class DataModelType {
-    StartStreaming, EndCall, Offer, Answer, IceCandidates, SignIn
+    StartStreaming, EndCall, Offer, Answer, IceCandidates, SignIn, ViewerJoined
 }
 
 data class DataModel(

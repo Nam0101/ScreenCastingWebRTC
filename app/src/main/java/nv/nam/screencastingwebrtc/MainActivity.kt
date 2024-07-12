@@ -32,7 +32,8 @@ import org.webrtc.MediaStream
  */
 class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener {
     private var binding: ActivityMainBinding? = null
-    private val streamId = (100000..999999).random().toString()
+//    private val streamId = (100000..999999).random().toString()
+    private val streamId = "123456"
     private val webrtcServiceRepository by inject<WebrtcServiceRepository>()
     private var isRecording = false
     private lateinit var audioRecord: AudioRecord

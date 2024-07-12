@@ -39,19 +39,19 @@ class ScreenCastingApplication : Application() {
         factory<Gson> {
             Gson()
         }
-        factory<WebrtcClient> {
+        single<WebrtcClient> {
             WebrtcClient(get(), get())
         }
-        factory<WebrtcServiceRepository> {
+        single<WebrtcServiceRepository> {
             WebrtcServiceRepository(androidContext())
         }
-        factory<ClientSocket> {
+        single<ClientSocket> {
             ClientSocket(get())
         }
-        factory<WebrtcService> {
+        single<WebrtcService> {
             WebrtcService()
         }
-        factory<MainRepository> {
+        single<MainRepository> {
             MainRepository(get(), get(), get())
         }
     }

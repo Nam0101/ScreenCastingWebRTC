@@ -36,12 +36,11 @@ class ClientSocket(
     var listener: Listener? = null
     fun init(streamID: String) {
         this.streamId = streamID
-        val url = BuildConfig.SERVER_IP
-        webSocket = object : WebSocketClient(URI(url)) {
+        webSocket = object : WebSocketClient(URI(BuildConfig.SERVER_IP)) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 sendMessageToSocket(
                     DataModel(
-                        streamId = streamID, DataModelType.SignIn, null, null
+                        streamId = streamID, DataModelType.SignIn, null
                     )
                 )
             }
@@ -50,9 +49,9 @@ class ClientSocket(
                 val model = try {
                     gson.fromJson(message.toString(), DataModel::class.java)
                 } catch (e: Exception) {
+                    Log.i("TAG", "onMessage: ${e.message}")
                     null
                 }
-                Log.d("TAG", "onMessage: $model")
                 model?.let {
                     listener?.onNewMessageReceived(it)
                 }

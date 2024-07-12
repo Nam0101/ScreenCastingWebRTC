@@ -30,7 +30,7 @@ class MainRepository(
         Log.i("MainRepository", "init: ")
     }
     private lateinit var streamId: String
-    private lateinit var target: String
+    private val target: String = "viewer-1"
     private lateinit var surfaceView: SurfaceViewRenderer
     var listener: Listener? = null
 
@@ -56,9 +56,7 @@ class MainRepository(
         socketClient.sendMessageToSocket(
             DataModel(
                 type = DataModelType.StartStreaming,
-                streamId = streamId,
-                target = target,
-                data = null
+                streamId = streamId, data = null, target = target
             )
         )
     }
@@ -74,7 +72,7 @@ class MainRepository(
     fun sendCallEndedToOtherPeer() {
         socketClient.sendMessageToSocket(
             DataModel(
-                type = DataModelType.EndCall, streamId = streamId, target = target, data = null
+                type = DataModelType.EndCall, streamId = streamId, data = null, target = null
             )
         )
     }
@@ -113,15 +111,14 @@ class MainRepository(
     }
 
     override fun onNewMessageReceived(model: DataModel) {
+        Log.i("MainRepository", "onNewMessageReceived: $model")
         when (model.type) {
             DataModelType.StartStreaming -> {
-                this.target = model.streamId.toString()
-                //notify ui, conneciton request is being made, so show it
+//                this.target = model.streamId.toString()
                 model.streamId?.let { listener?.onConnectionRequestReceived(it) }
             }
 
             DataModelType.EndCall -> {
-                //notify ui call is ended
                 listener?.onCallEndReceived()
             }
 
@@ -131,7 +128,7 @@ class MainRepository(
                         SessionDescription.Type.OFFER, model.data.toString()
                     )
                 )
-                this.target = model.streamId.toString()
+//                this.target = model.streamId.toString()
                 webrtcClient.answer(target)
             }
 
@@ -152,6 +149,10 @@ class MainRepository(
                 candidate?.let {
                     webrtcClient.addIceCandidate(it)
                 }
+            }
+            DataModelType.ViewerJoined -> {
+                val viewerId = model.target.toString()
+                webrtcClient.call(viewerId)
             }
 
             else -> Unit

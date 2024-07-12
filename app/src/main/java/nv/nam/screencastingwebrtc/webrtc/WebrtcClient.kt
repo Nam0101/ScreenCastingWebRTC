@@ -147,7 +147,6 @@ class WebrtcClient(
         )
         val audioDeviceModule = JavaAudioDeviceModule.builder(context)
             .createAudioDeviceModule() as JavaAudioDeviceModule
-        val audioTrackJni = audioDeviceModule.nativeAudioDeviceModulePointer
         val audioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             44100,
@@ -168,9 +167,9 @@ class WebrtcClient(
                     buffer.rewind()
                     val bytes = ByteArray(bytesRead)
                     buffer.get(bytes)
-                    localAudioTrack?.setEnabled(true)
-                    localAudioTrack?.setVolume(1.0)
-                    Log.i("AudioRecorder", "Đã ghi âm: $bytesRead")
+//                    localAudioTrack?.setEnabled(true)
+//                    localAudioTrack?.setVolume(1.0)
+//                    Log.i("AudioRecorder", "Đã ghi âm: $bytesRead")
                 }
             }
             audioRecord.stop()
