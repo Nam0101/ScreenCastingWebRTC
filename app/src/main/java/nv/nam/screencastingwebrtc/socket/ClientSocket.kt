@@ -38,6 +38,7 @@ class ClientSocket(
         this.streamId = streamID
         webSocket = object : WebSocketClient(URI(BuildConfig.SERVER_IP)) {
             override fun onOpen(handshakedata: ServerHandshake?) {
+                Log.i("SENDING SOCKET to server", "onOpen: $streamID server ip: ${BuildConfig.SERVER_IP}")
                 sendMessageToSocket(
                     DataModel(
                         streamId = streamID, DataModelType.SignIn, null

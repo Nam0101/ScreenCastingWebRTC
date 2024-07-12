@@ -70,7 +70,6 @@ class KtorSignalServer(
                 }
             }
         }.start(wait = false)
-        println("Server started on port $port")
     }
 
     private suspend fun handleMessage(

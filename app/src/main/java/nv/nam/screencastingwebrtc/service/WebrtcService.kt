@@ -49,6 +49,10 @@ class WebrtcService : Service(), MainRepository.Listener,KoinComponent {
             when (intent.action) {
                 "StartIntent" -> {
                     this.streamId = intent.getStringExtra("streamId").toString()
+                    Log.i("WebrtcService", "onStartCommand: $streamId")
+                    if(surfaceView == null){
+                        Log.i("WebrtcService", "onStartCommand: surfaceView is null")
+                    }
                     mainRepository.init(streamId, surfaceView!!)
                     startServiceWithNotification()
                 }

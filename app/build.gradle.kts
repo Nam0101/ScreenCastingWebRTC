@@ -18,7 +18,7 @@ android {
         versionName = "1.0.0 SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SERVER_IP", "\"ws://127.0.0.1:3000\"")
+        buildConfigField("String", "SERVER_IP", "\"ws://192.168.80.102:3000\"")
     }
 
     buildTypes {

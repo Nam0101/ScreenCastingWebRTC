@@ -123,7 +123,7 @@ class WebrtcClient(
         screenCapturer!!.initialize(
             surfaceTextureHelper, context, localVideoSource.capturerObserver
         )
-        screenCapturer!!.startCapture(screenWidthPixels, screenHeightPixels, 15)
+        screenCapturer!!.startCapture(screenWidthPixels, screenHeightPixels, 60)
 
         localVideoTrack =
             peerConnectionFactory.createVideoTrack(localTrackId + "_video", localVideoSource)
@@ -144,9 +144,9 @@ class WebrtcClient(
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION // Sử dụng chế độ thoại
 
         val minBufferSize = AudioRecord.getMinBufferSize(
-            44100,  // Tần số lấy mẫu
-            AudioFormat.CHANNEL_IN_MONO,  // Kênh âm thanh
-            AudioFormat.ENCODING_PCM_16BIT // Độ sâu bit
+            44100,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
         )
         val audioDeviceModule = JavaAudioDeviceModule.builder(context)
             .createAudioDeviceModule() as JavaAudioDeviceModule
@@ -162,19 +162,7 @@ class WebrtcClient(
 
         isRecording = true
         CoroutineScope(Dispatchers.IO).launch {
-            val buffer = ByteBuffer.allocateDirect(minBufferSize)
             audioRecord.startRecording()
-            while (isRecording) {
-                val bytesRead = audioRecord.read(buffer, minBufferSize)
-                if (bytesRead > 0) {
-                    buffer.rewind()
-                    val bytes = ByteArray(bytesRead)
-                    buffer.get(bytes)
-//                    localAudioTrack?.setEnabled(true)
-//                    localAudioTrack?.setVolume(1.0)
-//                    Log.i("AudioRecorder", "Đã ghi âm: $bytesRead")
-                }
-            }
             audioRecord.stop()
         }
         localStream?.addTrack(localAudioTrack)

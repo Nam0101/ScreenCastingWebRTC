@@ -22,8 +22,8 @@ import nv.nam.screencastingwebrtc.server.KtorLocalServer
 import nv.nam.screencastingwebrtc.server.KtorSignalServer
 import nv.nam.screencastingwebrtc.service.WebrtcService
 import nv.nam.screencastingwebrtc.service.WebrtcServiceRepository
-import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import org.webrtc.MediaStream
 
 
@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
     private var binding: ActivityMainBinding? = null
 //    private val streamId = (100000..999999).random().toString()
     private val streamId = "123456"
-    private val webrtcServiceRepository by inject<WebrtcServiceRepository>()
+    private val webrtcServiceRepository: WebrtcServiceRepository by inject()
     private var isRecording = false
     private lateinit var audioRecord: AudioRecord
     private lateinit var audioManager: MediaProjectionManager
@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
         private const val TAG = "MainActivity"
         private val REQUEST_SCREEN_CAPTURE = 101
         private val REQUEST_RECORD_AUDIO = 102
+        private val REQUEST_RECORD_AUDIO_FOREGROUND = 103
     }
 
     private fun startKtorServer() {
@@ -67,7 +68,9 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding!!.root)
-        binding!!.textView.text = streamId
+        binding!!.textView.text = getIPAddress()
+        WebrtcService.listener = this
+        WebrtcService.surfaceView = binding!!.surfaceView
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
@@ -76,20 +79,29 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
                 this, arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO
             )
         }
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION),
+                REQUEST_RECORD_AUDIO_FOREGROUND
+            )
+        }
         startKtorServer()
         binding!!.start.setOnClickListener {
             startScreenCapture()
             isRecording = true
             Log.i(TAG, "onCreate: start")
+            webrtcServiceRepository.startIntent(streamId)
+
         }
         binding!!.stop.setOnClickListener {
             webrtcServiceRepository.stopIntent()
             isRecording = false
             Log.i(TAG, "onCreate: stop")
         }
-        WebrtcService.listener = this
-        WebrtcService.surfaceView = binding!!.surfaceView
-        webrtcServiceRepository.startIntent(streamId)
     }
 
     private val screenCaptureLauncher = registerForActivityResult(
@@ -131,6 +143,13 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
     override fun onRemoteStreamAdded(stream: MediaStream) {
         Log.i(TAG, "onRemoteStreamAdded: $stream")
     }
+
+    private fun getIPAddress(): String {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        val ipAddress = wifiManager.connectionInfo.ipAddress
+        return android.text.format.Formatter.formatIpAddress(ipAddress)
+    }
+
 
 
 }
