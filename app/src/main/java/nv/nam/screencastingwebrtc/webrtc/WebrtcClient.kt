@@ -12,6 +12,9 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import nv.nam.screencastingwebrtc.utils.DataModel
 import nv.nam.screencastingwebrtc.utils.DataModelType
 import org.webrtc.AudioSource
@@ -62,7 +65,7 @@ class WebrtcClient(
     private var localAudioTrack: AudioTrack? = null
     private lateinit var audioDeviceModule: AudioDeviceModule
     private var isRecording = false
-    private lateinit var recordingThread: Thread
+
     private val iceServer = listOf(
         PeerConnection.IceServer(
             "turn:openrelay.metered.ca:443?transport=udp", "openrelayproject", "openrelayproject"
@@ -158,7 +161,7 @@ class WebrtcClient(
         localAudioTrack = peerConnectionFactory.createAudioTrack(audioTrackId, audioSource)
 
         isRecording = true
-        recordingThread = Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             val buffer = ByteBuffer.allocateDirect(minBufferSize)
             audioRecord.startRecording()
             while (isRecording) {
@@ -176,7 +179,6 @@ class WebrtcClient(
         }
         localStream?.addTrack(localAudioTrack)
 
-        recordingThread.start()
     }
 
 
@@ -280,7 +282,6 @@ class WebrtcClient(
     fun closeConnection() {
         try {
             isRecording = false
-            recordingThread.interrupt()
             screenCapturer?.stopCapture()
             screenCapturer?.dispose()
             localStream?.dispose()

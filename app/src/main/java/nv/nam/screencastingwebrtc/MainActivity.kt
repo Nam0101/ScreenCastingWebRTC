@@ -2,7 +2,6 @@ package nv.nam.screencastingwebrtc
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioRecord
 import android.media.projection.MediaProjectionManager
@@ -12,10 +11,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import nv.nam.screencastingwebrtc.databinding.ActivityMainBinding
 import nv.nam.screencastingwebrtc.repository.MainRepository
+import nv.nam.screencastingwebrtc.server.KtorLocalServer
+import nv.nam.screencastingwebrtc.server.KtorSignalServer
 import nv.nam.screencastingwebrtc.service.WebrtcService
 import nv.nam.screencastingwebrtc.service.WebrtcServiceRepository
 import org.koin.android.ext.android.inject
@@ -46,6 +50,18 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
         private val REQUEST_RECORD_AUDIO = 102
     }
 
+    private fun startKtorServer() {
+        CoroutineScope(Dispatchers.Default).launch {
+            delay(1000)
+            val ktorLocalServer = KtorLocalServer()
+            ktorLocalServer.startServer()
+        }
+        CoroutineScope(Dispatchers.Default).launch {
+            val ktorSignalServer = KtorSignalServer()
+            ktorSignalServer.startServer()
+            Log.i(TAG, "startKtorServer: ")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +76,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
                 this, arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO
             )
         }
+        startKtorServer()
         binding!!.start.setOnClickListener {
             startScreenCapture()
             isRecording = true

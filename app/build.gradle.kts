@@ -18,7 +18,7 @@ android {
         versionName = "1.0.0 SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SERVER_IP", "\"ws://10.10.11.30:3000\"")
+        buildConfigField("String", "SERVER_IP", "\"ws://127.0.0.1:3000\"")
     }
 
     buildTypes {
@@ -62,4 +62,11 @@ dependencies {
 
     // koin
     implementation(libs.koin.android.v343)
+
+    //ICO and ktor server
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.websockets)
+    implementation(libs.ktor.server.websockets)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kotlinx.serialization.json)
 }

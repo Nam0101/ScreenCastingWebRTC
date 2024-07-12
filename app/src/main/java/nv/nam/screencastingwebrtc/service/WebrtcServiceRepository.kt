@@ -34,41 +34,21 @@ class WebrtcServiceRepository(
 
     fun requestConnection(target: String) {
         Log.i("WebrtcServiceRepository", "requestConnection: $target")
-        val thread = Thread {
+
+        CoroutineScope(Dispatchers.IO).launch {
             val startIntent = Intent(context, WebrtcService::class.java)
             startIntent.action = "RequestConnectionIntent"
             startIntent.putExtra("target", target)
             context.startForegroundService(startIntent)
         }
-        thread.start()
-    }
-
-    fun acceptCAll(target: String) {
-        val thread = Thread {
-            val startIntent = Intent(context, WebrtcService::class.java)
-            startIntent.action = "AcceptCallIntent"
-            startIntent.putExtra("target", target)
-            context.startForegroundService(startIntent)
-        }
-        thread.start()
-    }
-
-    fun endCallIntent() {
-        val thread = Thread {
-            val startIntent = Intent(context, WebrtcService::class.java)
-            startIntent.action = "EndCallIntent"
-            context.startForegroundService(startIntent)
-        }
-        thread.start()
     }
 
     fun stopIntent() {
-        val thread = Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             val startIntent = Intent(context, WebrtcServiceRepository::class.java)
             startIntent.action = "StopIntent"
             context.startForegroundService(startIntent)
         }
-        thread.start()
     }
 
 }
