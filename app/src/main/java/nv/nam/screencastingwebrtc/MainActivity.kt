@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
     private var binding: ActivityMainBinding? = null
 //    private val streamId = (100000..999999).random().toString()
     private val streamId = "123456"
+    private val userId= "viewer-1"
     private val webrtcServiceRepository: WebrtcServiceRepository by inject()
     private var isRecording = false
     private lateinit var audioRecord: AudioRecord
@@ -110,7 +111,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
             Log.i(TAG, "Screen capture permission granted")
 
             WebrtcService.screenPermissionIntent = intentData
-            webrtcServiceRepository.requestConnection(streamId)
+            webrtcServiceRepository.requestConnection(userId)
         } else {
             Log.i(TAG, "Screen capture permission denied")
         }

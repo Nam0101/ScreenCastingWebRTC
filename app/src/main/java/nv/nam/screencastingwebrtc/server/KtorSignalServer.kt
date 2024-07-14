@@ -1,6 +1,7 @@
 package nv.nam.screencastingwebrtc.server
 
 import android.util.Log
+import com.google.gson.Gson
 import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.ApplicationEngine
@@ -11,13 +12,8 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-
 import nv.nam.screencastingwebrtc.utils.DataModel
 import nv.nam.screencastingwebrtc.utils.DataModelType
-import com.google.gson.Gson
 
 class KtorSignalServer(private val port: Int = 3000) {
     private var server: ApplicationEngine? = null
@@ -31,11 +27,15 @@ class KtorSignalServer(private val port: Int = 3000) {
             routing {
                 webSocket("/") {
                     val thisConnection = this
-                    Log.i("KtorSignalServer", "Connection opened from: $thisConnection")
+                    Log.i("KtorSignalServer", "Connection opened from: ${thisConnection}")
+                    val remoteAddress = call.request.local.remoteHost
+                    Log.i("KtorSignalServer", "Remote address: $remoteAddress")
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             try {
                                 val data = gson.fromJson(frame.readText(), DataModel::class.java)
+                                Log.i("KtorSignalServer", "Message received: $data")
+                                Log.i("KtorSignalServer", "send to connection: $thisConnection with remoteAddress: $remoteAddress")
                                 handleMessage(thisConnection, data)
                             } catch (e: Exception) {
                                 println("Error parsing message: ${e.message}")
@@ -48,25 +48,63 @@ class KtorSignalServer(private val port: Int = 3000) {
     }
 
     private suspend fun handleMessage(connection: DefaultWebSocketServerSession, data: DataModel) {
+        Log.i("KtorSignalServer", "Handling message: $data")
         when (data.type) {
             DataModelType.SignIn -> {
-                data.streamId?.let { connections[it] = connection }
+                if (data.streamId == "123456") {
+                    connections["123456"] = connection
+                    Log.i("KtorSignalServer", "Streamer signed in with StreamID: 123456")
+                } else {
+                    connections[data.streamId!!] = connection
+                    Log.i("KtorSignalServer", "Viewer ${data.streamId} signed in")
+                }
             }
-            DataModelType.Offer, DataModelType.Answer, DataModelType.IceCandidates -> {
-                data.target?.let { target ->
-                    connections[target]?.let { targetConnection ->
-                        sendMessage(targetConnection, data)
-                        Log.i("KtorSignalServer", "Message sent to: $target")
+            DataModelType.Offer -> {
+                connections["viewer-1"]?.let {
+                    sendMessage(it, data)
+                    Log.i("KtorSignalServer", "Offer sent to viewer")
+                }
+            }
+            DataModelType.Answer -> {
+                connections["123456"]?.let {
+                    sendMessage(it, data)
+                    Log.i("KtorSignalServer", "Answer sent to streamer")
+                }
+            }
+            DataModelType.IceCandidates -> {
+                if (data.streamId == "123456") {
+                    connections["viewer-1"]?.let {
+                        sendMessage(it, data)
+                        Log.i("KtorSignalServer", "ICE Candidate sent to viewer")
+                    }
+                } else {
+                    connections["123456"]?.let {
+                        sendMessage(it, data)
+                        Log.i("KtorSignalServer", "ICE Candidate sent to streamer")
                     }
                 }
             }
-            // Handle other DataModelType cases as needed
-            else -> println("Unknown message type: ${data.type}")
+            DataModelType.StartStreaming -> {
+                connections["viewer-1"]?.let {
+                    sendMessage(it, data)
+                    Log.i("KtorSignalServer", "StartStreaming message sent to viewer")
+                }
+            }
+            DataModelType.WatchStream -> {
+                connections["123456"]?.let {
+                    Log.i("KtorSignalServer", "This connection: $connection")
+                    sendMessage(it, DataModel(type = DataModelType.ViewerJoined, streamId = "123456", target = "viewer-1"))
+                    Log.i("KtorSignalServer", "ViewerJoined message sent to streamer")
+                }
+            }
+            else -> Log.i("KtorSignalServer", "Unhandled message type: ${data.type}")
         }
     }
 
     private suspend fun sendMessage(connection: DefaultWebSocketServerSession, message: DataModel) {
+        Log.i("KtorSignalServer", "Sending message: $message")
         val jsonMessage = gson.toJson(message)
         connection.send(Frame.Text(jsonMessage))
+        Log.i("KtorSignalServer", "Message sent: $message")
     }
 }

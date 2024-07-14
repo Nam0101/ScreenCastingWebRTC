@@ -53,7 +53,9 @@ class WebrtcService : Service(), MainRepository.Listener,KoinComponent {
                     if(surfaceView == null){
                         Log.i("WebrtcService", "onStartCommand: surfaceView is null")
                     }
-                    mainRepository.init(streamId, surfaceView!!)
+                    else {
+                        mainRepository.init(streamId, surfaceView!!)
+                    }
                     startServiceWithNotification()
                 }
 

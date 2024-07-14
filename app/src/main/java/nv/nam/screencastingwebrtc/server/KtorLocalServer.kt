@@ -20,8 +20,8 @@ class KtorLocalServer {
     }
 
     private val HTML = """
-        <!DOCTYPE html>
-<html lang ="en">
+      <!DOCTYPE html>
+<html lang="en">
 
 <head>
     <title>WebRTC Viewer</title>
@@ -31,48 +31,40 @@ class KtorLocalServer {
     <h1>WebRTC Viewer</h1>
     <video id="remoteVideo" autoplay playsinline controls></video>
 
-   <script>
-    const videoElement = document.getElementById('remoteVideo');
-    const streamId = "123456"
-    const wsUrl = 'ws://192.168.80.105:3000';
-    const connection = new WebSocket(wsUrl);
-    const clientId = "viewer-1";
-    let peerConnection;
-    let remoteStream = new MediaStream();
+    <script>
+        const videoElement = document.getElementById('remoteVideo');
+        const streamId = "123456"; // Stream ID for streamer (unchanged)
+        const wsUrl = 'ws://192.168.80.102:3000'; // Replace with your server URL
+        const connection = new WebSocket(wsUrl);
+        const clientId = "viewer-1"; // Client ID (unchanged)
+        let peerConnection;
+        let remoteStream = new MediaStream();
 
-    connection.onopen = () => {
-        connection.send(JSON.stringify({ type: 'SignIn', streamId: clientId }));
+        connection.onopen = () => {
+            connection.send(JSON.stringify({ type: 'SignIn', streamId: clientId }));
+            console.log('Connected to the signaling server');
+            // No need to send WatchStream, server knows the viewer ID
+        };
 
-        if (streamId) {
-            connection.send(JSON.stringify({ type: 'WatchStream', streamId: streamId, target: clientId }));
-        } else {
-            console.error('Missing streamId parameter');
-        }
-    };
+        connection.onmessage = async (message) => {
+            const data = JSON.parse(message.data);
+            switch (data.type) {
+                case 'Offer':
+                    await handleOffer(data.data);
+                    break;
+                case 'IceCandidates':
+                    await handleIceCandidate(data.data);
+                    break;
+                case 'StreamStarted':
+                    console.log("Stream Started: ", data);
+                    break; // No action needed for StreamStarted, offer is already handled
+                default:
+                    console.log('Unknown message type:', data);
+            }
+        };
 
-    connection.onmessage = async (message) => {
-        const data = JSON.parse(message.data);
-        switch (data.type) {
-            case 'Offer':
-                await handleOffer(data.data);
-                break;
-            case 'Answer':
-                // This case might not be necessary for a viewer client
-                break;
-            case 'IceCandidates':
-                await handleOffer(data.data);
-                break;
-            case 'StreamStarted':
-                console.log('Stream started:', data.streamId);
-                break;
-            default:
-                console.log('Unknown message type:', data);
-        }
-    };
-
-    async function handleOffer(offerSdp) {
-            console.log("Received offer SDP:", offerSdp); // Debug log
-
+        async function handleOffer(offerSdp) {
+            console.log("Received offer SDP:", offerSdp); 
             peerConnection = new RTCPeerConnection({
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Example STUN server
             });
@@ -95,35 +87,34 @@ class KtorLocalServer {
             await peerConnection.setLocalDescription(answer);
             connection.send(JSON.stringify({
                 type: 'Answer',
-                streamId: clientId,
-                target: streamId,
+                streamId: clientId, // No need to send streamId, server knows it's the viewer
                 data: answer.sdp
             }));
         }
 
-    async function handleIceCandidate(candidate) {
-        try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (error) {
-            console.error('Error adding ICE candidate:', error);
+        async function handleIceCandidate(candidate) {
+            try {
+                console.log("handleIceCandidate", candidate);
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
         }
-    }
 
-    function handleIceCandidateEvent(event) {
-        if (event.candidate) {
-            connection.send(JSON.stringify({
-                type: 'IceCandidates',
-                streamId: clientId,
-                target: streamId,
-                data: event.candidate
-            }));
+        function handleIceCandidateEvent(event) {
+            if (event.candidate) {
+                connection.send(JSON.stringify({
+                    type: 'IceCandidates',
+                    streamId: clientId, // No need to send streamId, server knows it's the viewer
+                    data: event.candidate
+                }));
+            }
         }
-    }
 
-    function handleTrackEvent(event) {
-        remoteStream.addTrack(event.track);
-    }
-</script>
+        function handleTrackEvent(event) {
+            remoteStream.addTrack(event.track);
+        }
+    </script>
 </body>
 
 </html>
