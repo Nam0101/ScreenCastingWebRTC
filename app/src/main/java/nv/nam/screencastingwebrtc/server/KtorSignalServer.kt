@@ -15,35 +15,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-@Serializable
-data class SignalMessage(
-    val type: String,
-    val streamId: String? = null,
-    val target: String? = null,
-    val data: String? = null
-)
+import nv.nam.screencastingwebrtc.utils.DataModel
+import nv.nam.screencastingwebrtc.utils.DataModelType
+import com.google.gson.Gson
 
-@Serializable
-data class ViewerJoinedMessage(val type: String, val streamId: String, val target: String)
-
-@Serializable
-data class StreamStartedMessage(val type: String, val streamId: String)
-
-@Serializable
-data class ErrorMessage(val type: String, val message: String)
-
-/**
- * @author Nam Nguyen Van
- * Project: ScreenCastingWebRTC
- * Created: 12/7/2024
- * Github: https://github.com/Nam0101
- * @description :
- */
-class KtorSignalServer(
-    private val port: Int = 3000
-) {
+class KtorSignalServer(private val port: Int = 3000) {
     private var server: ApplicationEngine? = null
-    val connections = mutableMapOf<String, DefaultWebSocketServerSession>()
+    private val connections = mutableMapOf<String, DefaultWebSocketServerSession>()
+    private val gson = Gson() // Use Gson for serialization/deserialization
+
     fun startServer() {
         server = embeddedServer(CIO, port = port) {
             install(WebSockets)
@@ -51,84 +31,42 @@ class KtorSignalServer(
             routing {
                 webSocket("/") {
                     val thisConnection = this
+                    Log.i("KtorSignalServer", "Connection opened from: $thisConnection")
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             try {
-                                val data = Json.decodeFromString<SignalMessage>(frame.readText())
+                                val data = gson.fromJson(frame.readText(), DataModel::class.java)
                                 handleMessage(thisConnection, data)
                             } catch (e: Exception) {
                                 println("Error parsing message: ${e.message}")
                             }
                         }
                     }
-
-                    val connectionId = connections.entries.find { it.value == thisConnection }?.key
-                    if (connectionId != null) {
-                        connections.remove(connectionId)
-                        Log.i("KtorSignalServer", "Connection closed: $connectionId")
-                    }
                 }
             }
         }.start(wait = false)
     }
 
-    private suspend fun handleMessage(
-        connection: DefaultWebSocketServerSession, data: SignalMessage
-    ) {
+    private suspend fun handleMessage(connection: DefaultWebSocketServerSession, data: DataModel) {
         when (data.type) {
-            "SignIn" -> {
-                val streamId = data.streamId
-                if (streamId != null) {
-                    connections[streamId] = connection
-                }
+            DataModelType.SignIn -> {
+                data.streamId?.let { connections[it] = connection }
             }
-
-            "Offer", "Answer", "IceCandidates" -> {
-                val targetConnection = data.target?.let { connections[it] }
-                if (targetConnection != null) {
-                    sendMessage(targetConnection, data)
-                    Log.i("KtorSignalServer", "Message sent to: ${data.target}")
-                } else {
-                    Log.i("KtorSignalServer", "Connection not found: ${data.target}")
-                }
-            }
-
-            "WatchStream" -> {
-                val streamId = data.streamId
-                val clientId = data.target
-                val targetConnection = streamId?.let { connections[it] }
-                if (targetConnection != null) {
-                    sendMessage(
-                        targetConnection,
-                        ViewerJoinedMessage("ViewerJoined", streamId, clientId ?: "unknown")
-                    )
-                } else {
-                    sendMessage(connection, ErrorMessage("Error", "Stream not found"))
-                }
-            }
-
-            "StartStreaming" -> {
-                val streamId = data.streamId
-                if (streamId != null) {
-                    for (clientId in connections.keys) {
-                        if (clientId != streamId) {
-                            val clientConnection = connections[clientId]
-                            if (clientConnection != null) {
-                                sendMessage(
-                                    clientConnection,
-                                    StreamStartedMessage("StreamStarted", streamId)
-                                )
-                            }
-                        }
+            DataModelType.Offer, DataModelType.Answer, DataModelType.IceCandidates -> {
+                data.target?.let { target ->
+                    connections[target]?.let { targetConnection ->
+                        sendMessage(targetConnection, data)
+                        Log.i("KtorSignalServer", "Message sent to: $target")
                     }
                 }
             }
-
+            // Handle other DataModelType cases as needed
             else -> println("Unknown message type: ${data.type}")
         }
     }
 
-    private suspend fun sendMessage(connection: DefaultWebSocketServerSession, message: Any) {
-        connection.send(Frame.Text(Json.encodeToString(message)))
+    private suspend fun sendMessage(connection: DefaultWebSocketServerSession, message: DataModel) {
+        val jsonMessage = gson.toJson(message)
+        connection.send(Frame.Text(jsonMessage))
     }
 }

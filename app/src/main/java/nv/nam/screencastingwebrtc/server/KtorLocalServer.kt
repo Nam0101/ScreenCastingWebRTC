@@ -34,7 +34,7 @@ class KtorLocalServer {
    <script>
     const videoElement = document.getElementById('remoteVideo');
     const streamId = "123456"
-    const wsUrl = 'ws://192.168.119.1:3000';
+    const wsUrl = 'ws://192.168.80.105:3000';
     const connection = new WebSocket(wsUrl);
     const clientId = "viewer-1";
     let peerConnection;
@@ -66,7 +66,7 @@ class KtorLocalServer {
                 console.log('Stream started:', data.streamId);
                 break;
             default:
-                console.log('Unknown message type:', data.type);
+                console.log('Unknown message type:', data);
         }
     };
 
@@ -130,7 +130,7 @@ class KtorLocalServer {
     """.trimIndent()
 
     fun startServer() {
-        embeddedServer(CIO, port = 8080) { // Use CIO engine
+        embeddedServer(CIO, port = 8080) {
             routing {
                 get("/") {
                     call.respondText(HTML , contentType = io.ktor.http.ContentType.Text.Html)
