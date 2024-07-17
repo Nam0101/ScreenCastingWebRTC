@@ -59,6 +59,7 @@ class MainRepository(
                 streamId = streamId, data = null, target = target
             )
         )
+        Log.i("MainRepository", "sendScreenShareConnection: to $target")
     }
 
     fun startScreenCapturing(surfaceView: SurfaceViewRenderer) {
@@ -114,14 +115,17 @@ class MainRepository(
         Log.i("MainRepository", "onNewMessageReceived: $model")
         when (model.type) {
             DataModelType.StartStreaming -> {
+                Log.i("MainRepository", "onNewMessageReceived: StartStreaming")
                 model.streamId?.let { listener?.onConnectionRequestReceived(it) }
             }
 
             DataModelType.EndCall -> {
+                Log.i("MainRepository", "onNewMessageReceived: EndCall")
                 listener?.onCallEndReceived()
             }
 
             DataModelType.Offer -> {
+                Log.i("MainRepository", "onNewMessageReceived: Offer")
                 webrtcClient.onRemoteSessionReceived(
                     SessionDescription(
                         SessionDescription.Type.OFFER, model.data.toString()
@@ -132,6 +136,7 @@ class MainRepository(
             }
 
             DataModelType.Answer -> {
+                Log.i("MainRepository", "onNewMessageReceived: Answer")
                 webrtcClient.onRemoteSessionReceived(
                     SessionDescription(SessionDescription.Type.ANSWER, model.data.toString())
                 )
@@ -139,6 +144,7 @@ class MainRepository(
             }
 
             DataModelType.IceCandidates -> {
+                Log.i("MainRepository", "onNewMessageReceived: IceCandidates")
                 val candidate = try {
                     gson.fromJson(model.data.toString(), IceCandidate::class.java)
                 } catch (e: Exception) {
@@ -150,6 +156,7 @@ class MainRepository(
                 }
             }
             DataModelType.ViewerJoined -> {
+
                 Log.i("MainRepository", "onNewMessageReceived: ViewerJoined")
                 val viewerId = model.target.toString()
                 webrtcClient.call(viewerId)

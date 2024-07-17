@@ -22,8 +22,8 @@ class KtorLocalServer(
     }
 
     private val HTML = """
-        <!DOCTYPE html>
-<html lang ="en">
+      <!DOCTYPE html>
+<html lang="en">
 
 <head>
     <title>WebRTC Viewer</title>
@@ -75,6 +75,9 @@ class KtorLocalServer(
     async function handleOffer(offerSdp) {
             console.log("Received offer SDP:", offerSdp); // Debug log
 
+
+        async function handleOffer(offerSdp) {
+            console.log("Received offer SDP:", offerSdp); 
             peerConnection = new RTCPeerConnection({
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Example STUN server
             });
@@ -97,42 +100,41 @@ class KtorLocalServer(
             await peerConnection.setLocalDescription(answer);
             connection.send(JSON.stringify({
                 type: 'Answer',
-                streamId: clientId,
-                target: streamId,
+                streamId: clientId, // No need to send streamId, server knows it's the viewer
                 data: answer.sdp
             }));
         }
 
-    async function handleIceCandidate(candidate) {
-        try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (error) {
-            console.error('Error adding ICE candidate:', error);
+        async function handleIceCandidate(candidate) {
+            try {
+                console.log("handleIceCandidate", candidate);
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
         }
-    }
 
-    function handleIceCandidateEvent(event) {
-        if (event.candidate) {
-            connection.send(JSON.stringify({
-                type: 'IceCandidates',
-                streamId: clientId,
-                target: streamId,
-                data: event.candidate
-            }));
+        function handleIceCandidateEvent(event) {
+            if (event.candidate) {
+                connection.send(JSON.stringify({
+                    type: 'IceCandidates',
+                    streamId: clientId, // No need to send streamId, server knows it's the viewer
+                    data: event.candidate
+                }));
+            }
         }
-    }
 
-    function handleTrackEvent(event) {
-        remoteStream.addTrack(event.track);
-    }
-</script>
+        function handleTrackEvent(event) {
+            remoteStream.addTrack(event.track);
+        }
+    </script>
 </body>
 
 </html>
     """.trimIndent()
 
     fun startServer() {
-        embeddedServer(CIO, port = 8080) { // Use CIO engine
+        embeddedServer(CIO, port = 8080) {
             routing {
                 get("/") {
                     call.respondText(HTML , contentType = io.ktor.http.ContentType.Text.Html)

@@ -39,6 +39,7 @@ class ClientSocket(
     }
 
     var listener: Listener? = null
+
     fun init(streamID: String) {
         this.streamId = streamID
         val serverIP = getIPAddress()
@@ -64,28 +65,39 @@ class ClientSocket(
                 }
                 model?.let {
                     listener?.onNewMessageReceived(it)
+
                 }
             }
 
             override fun onClose(code: Int, reason: String?, remote: Boolean) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    delay(5000)
-                    init(streamID)
-                }
+                Log.i("ClientSocket", "WebSocket Closed, reason: $reason")
+                attemptReconnect()
             }
 
             override fun onError(ex: Exception?) {
+                Log.e("ClientSocket", "WebSocket Error: ${ex?.message}")
+                attemptReconnect()
             }
-        }
-        webSocket?.connect()
+        }.apply { connect() }
     }
 
+    private fun attemptReconnect() {
+        CoroutineScope(Dispatchers.IO).launch {
+            delay(5000) // Wait for 5 seconds before attempting to reconnect
+            connectWebSocket() // Attempt to reconnect
+        }
+    }
 
     fun sendMessageToSocket(message: Any?) {
-        try {
-            webSocket?.send(gson.toJson(message))
-        } catch (e: Exception) {
-            e.printStackTrace()
+        if (webSocket?.isOpen == true) {
+            try {
+                webSocket?.send(gson.toJson(message))
+            } catch (e: Exception) {
+                Log.e("ClientSocket", "Error sending message: ${e.message}")
+            }
+        } else {
+            Log.w("ClientSocket", "WebSocket is not connected. Attempting to reconnect...")
+            attemptReconnect()
         }
     }
 

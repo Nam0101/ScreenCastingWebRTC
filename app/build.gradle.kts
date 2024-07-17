@@ -19,6 +19,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SERVER_IP", "\"ws://10.10.20.148:3000\"")
+
     }
 
 
@@ -69,5 +70,6 @@ dependencies {
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.serialization.json)
 }

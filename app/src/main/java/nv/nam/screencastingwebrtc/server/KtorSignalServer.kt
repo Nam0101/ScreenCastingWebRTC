@@ -70,17 +70,7 @@ class KtorSignalServer(
                                 Log.e("KtorSignalServer", "Error parsing message: $text")
                             }
                         }
-
                         else -> {}
-                    }
-                }
-                val streamId = connections.entries.find { it.value == this }?.key
-                if (streamId != null) {
-                    connections.remove(streamId)
-                }
-            }
-        }
-    }
 
     private suspend fun handleMessage(
         connection: DefaultWebSocketServerSession,
@@ -135,6 +125,9 @@ class KtorSignalServer(
                     }
                 }
             }
+            else -> Log.i("KtorSignalServer", "Unhandled message type: ${data.type}")
+        }
+    }
 
             else -> Log.e("KtorSignalServer", "Unknown message type: ${data.type}")
         }
