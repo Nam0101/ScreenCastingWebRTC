@@ -34,7 +34,7 @@ class KtorLocalServer {
     <script>
         const videoElement = document.getElementById('remoteVideo');
         const streamId = "123456"; // Stream ID for streamer (unchanged)
-        const wsUrl = 'ws://192.168.80.102:3000'; // Replace with your server URL
+        const wsUrl = 'ws://10.10.20.148:3000'; // Replace with your server URL
         const connection = new WebSocket(wsUrl);
         const clientId = "viewer-1"; // Client ID (unchanged)
         let peerConnection;

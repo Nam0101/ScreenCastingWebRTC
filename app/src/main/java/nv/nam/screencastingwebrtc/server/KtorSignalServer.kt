@@ -12,6 +12,7 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlinx.coroutines.isActive
 import nv.nam.screencastingwebrtc.utils.DataModel
 import nv.nam.screencastingwebrtc.utils.DataModelType
 
@@ -28,14 +29,10 @@ class KtorSignalServer(private val port: Int = 3000) {
                 webSocket("/") {
                     val thisConnection = this
                     Log.i("KtorSignalServer", "Connection opened from: ${thisConnection}")
-                    val remoteAddress = call.request.local.remoteHost
-                    Log.i("KtorSignalServer", "Remote address: $remoteAddress")
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             try {
                                 val data = gson.fromJson(frame.readText(), DataModel::class.java)
-                                Log.i("KtorSignalServer", "Message received: $data")
-                                Log.i("KtorSignalServer", "send to connection: $thisConnection with remoteAddress: $remoteAddress")
                                 handleMessage(thisConnection, data)
                             } catch (e: Exception) {
                                 println("Error parsing message: ${e.message}")
@@ -49,49 +46,37 @@ class KtorSignalServer(private val port: Int = 3000) {
 
     private suspend fun handleMessage(connection: DefaultWebSocketServerSession, data: DataModel) {
         Log.i("KtorSignalServer", "Handling message: $data")
+
         when (data.type) {
             DataModelType.SignIn -> {
-                if (data.streamId == "123456") {
-                    connections["123456"] = connection
-                    Log.i("KtorSignalServer", "Streamer signed in with StreamID: 123456")
-                } else {
-                    connections[data.streamId!!] = connection
-                    Log.i("KtorSignalServer", "Viewer ${data.streamId} signed in")
-                }
+                val connectionKey = data.streamId.toString()
+                connections[connectionKey] = connection
+                Log.i(
+                    "KtorSignalServer",
+                    "Connection added: $connectionKey - Total Connections: ${connections.size}"
+                ) // Check total connections
+
             }
-            DataModelType.Offer -> {
-                connections["viewer-1"]?.let {
-                    sendMessage(it, data)
-                    Log.i("KtorSignalServer", "Offer sent to viewer")
-                }
-            }
-            DataModelType.Answer -> {
-                connections["123456"]?.let {
-                    sendMessage(it, data)
-                    Log.i("KtorSignalServer", "Answer sent to streamer")
-                }
-            }
+
+            DataModelType.Offer, DataModelType.Answer,
             DataModelType.IceCandidates -> {
-                if (data.streamId == "123456") {
-                    connections["viewer-1"]?.let {
-                        sendMessage(it, data)
-                        Log.i("KtorSignalServer", "ICE Candidate sent to viewer")
-                    }
-                } else {
-                    connections["123456"]?.let {
-                        sendMessage(it, data)
-                        Log.i("KtorSignalServer", "ICE Candidate sent to streamer")
-                    }
-                }
+                val targetStreamId = if (data.streamId == "123456") "viewer-1" else "123456"
+                connections[targetStreamId]?.let { targetConnection ->
+                    sendMessage(targetConnection, data)
+                    Log.i("KtorSignalServer", "${data.type} sent to $targetStreamId")
+                } ?: Log.w("KtorSignalServer", "Target connection not found: $targetStreamId")
             }
             DataModelType.StartStreaming -> {
-                connections["viewer-1"]?.let {
-                    sendMessage(it, data)
-                    Log.i("KtorSignalServer", "StartStreaming message sent to viewer")
+                // send to viewer
+                val targetStreamId = if (data.streamId == "123456") "viewer-1" else "123456"
+                connections[targetStreamId]?.let {
+                    sendMessage(it, DataModel(type = DataModelType.StreamStarted, streamId = "123456"))
                 }
+                Log.i("KtorSignalServer", "StartStreaming message broadcasted")
             }
             DataModelType.WatchStream -> {
-                connections["123456"]?.let {
+                val targetStreamId = if (data.streamId == "123456") "viewer-1" else "123456"
+                connections[targetStreamId]?.let {
                     Log.i("KtorSignalServer", "This connection: $connection")
                     sendMessage(it, DataModel(type = DataModelType.ViewerJoined, streamId = "123456", target = "viewer-1"))
                     Log.i("KtorSignalServer", "ViewerJoined message sent to streamer")
@@ -102,9 +87,28 @@ class KtorSignalServer(private val port: Int = 3000) {
     }
 
     private suspend fun sendMessage(connection: DefaultWebSocketServerSession, message: DataModel) {
-        Log.i("KtorSignalServer", "Sending message: $message")
-        val jsonMessage = gson.toJson(message)
-        connection.send(Frame.Text(jsonMessage))
-        Log.i("KtorSignalServer", "Message sent: $message")
+        try {
+            if (connection.isActive) {
+                val jsonMessage = gson.toJson(message)
+                connection.send(Frame.Text(jsonMessage))
+                Log.i("KtorSignalServer", "Message sent: $message to connection: $connection")
+            } else {
+                Log.w("KtorSignalServer", "Attempted to send to inactive connection: $connection")
+            }
+        } catch (e: Exception) {
+            Log.e(
+                "KtorSignalServer", "Error sending message: $message to $connection - ${e.message}"
+            )
+        }
+    }
+
+    private suspend fun broadcastMessage(message: DataModel) {
+        connections.values.forEach { session ->
+            if (session.isActive) {
+                sendMessage(session, message)
+            } else {
+                Log.i("KtorSignalServer", "Skipping inactive session: $session")
+            }
+        }
     }
 }
