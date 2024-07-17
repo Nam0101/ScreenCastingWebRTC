@@ -3,7 +3,10 @@ package nv.nam.screencastingwebrtc
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.util.Log
@@ -69,6 +72,19 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
         binding!!.textView.text = getIPAddress()
         WebrtcService.listener = this
         WebrtcService.surfaceView = binding!!.surfaceView
+        audioManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val minBufferSize = AudioRecord.getMinBufferSize(
+            44100,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.DEFAULT,
+            44100,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            minBufferSize
+        )
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
@@ -93,6 +109,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
             isRecording = true
             Log.i(TAG, "onCreate: start")
             webrtcServiceRepository.startIntent(streamId)
+            startRecording()
 
         }
         binding!!.stop.setOnClickListener {
@@ -100,6 +117,22 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
             isRecording = false
             Log.i(TAG, "onCreate: stop")
         }
+
+    }
+
+    private fun startRecording() {
+        if (!isRecording) {
+            isRecording = true
+            CoroutineScope(recordingCoroutine).launch {
+                audioRecord.startRecording()
+                audioRecord.stop()
+                audioRecord.release()
+            }
+        }
+    }
+
+    private fun stopRecording() {
+        isRecording = false
     }
 
     private val screenCaptureLauncher = registerForActivityResult(
