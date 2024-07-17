@@ -14,7 +14,9 @@ import io.ktor.server.routing.routing
  * Github: https://github.com/Nam0101
  * @description : KtorLocalServer is the class to handle the local server
  */
-class KtorLocalServer {
+class KtorLocalServer(
+    private val serverIp: String
+) {
     init {
         println("KtorLocalServer init")
     }
@@ -31,37 +33,48 @@ class KtorLocalServer {
     <h1>WebRTC Viewer</h1>
     <video id="remoteVideo" autoplay playsinline controls></video>
 
-    <script>
-        const videoElement = document.getElementById('remoteVideo');
-        const streamId = "123456"; // Stream ID for streamer (unchanged)
-        const wsUrl = 'ws://10.10.20.148:3000'; // Replace with your server URL
-        const connection = new WebSocket(wsUrl);
-        const clientId = "viewer-1"; // Client ID (unchanged)
-        let peerConnection;
-        let remoteStream = new MediaStream();
+   <script>
+    const videoElement = document.getElementById('remoteVideo');
+    const streamId = "123456"
+    const wsUrl = 'ws://$serverIp:3000'; 
+    const connection = new WebSocket(wsUrl);
+    const clientId = "viewer-1";
+    let peerConnection;
+    let remoteStream = new MediaStream();
 
-        connection.onopen = () => {
-            connection.send(JSON.stringify({ type: 'SignIn', streamId: clientId }));
-            console.log('Connected to the signaling server');
-            // No need to send WatchStream, server knows the viewer ID
-        };
+    connection.onopen = () => {
+        connection.send(JSON.stringify({ type: 'SignIn', streamId: clientId }));
 
-        connection.onmessage = async (message) => {
-            const data = JSON.parse(message.data);
-            switch (data.type) {
-                case 'Offer':
-                    await handleOffer(data.data);
-                    break;
-                case 'IceCandidates':
-                    await handleIceCandidate(data.data);
-                    break;
-                case 'StreamStarted':
-                    console.log("Stream Started: ", data);
-                    break; // No action needed for StreamStarted, offer is already handled
-                default:
-                    console.log('Unknown message type:', data);
-            }
-        };
+        if (streamId) {
+            connection.send(JSON.stringify({ type: 'WatchStream', streamId: streamId, target: clientId }));
+        } else {
+            console.error('Missing streamId parameter');
+        }
+    };
+
+    connection.onmessage = async (message) => {
+        const data = JSON.parse(message.data);
+        switch (data.type) {
+            case 'Offer':
+                await handleOffer(data.data);
+                break;
+            case 'Answer':
+                // This case might not be necessary for a viewer client
+                break;
+            case 'IceCandidates':
+                await handleOffer(data.data);
+                break;
+            case 'StreamStarted':
+                console.log('Stream started:', data.streamId);
+                break;
+            default:
+                console.log('Unknown message type:', data.type);
+        }
+    };
+
+    async function handleOffer(offerSdp) {
+            console.log("Received offer SDP:", offerSdp); // Debug log
+
 
         async function handleOffer(offerSdp) {
             console.log("Received offer SDP:", offerSdp); 

@@ -1,5 +1,7 @@
 package nv.nam.screencastingwebrtc.socket
 
+import android.content.Context
+import android.net.wifi.WifiManager
 import android.util.Log
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -13,9 +15,24 @@ import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import java.net.URI
 
-class ClientSocket(private val gson: Gson) {
+/**
+ * @author Nam Nguyen Van
+ * Project: ScreenCastingWebRTC
+ * Created: 11/7/2024
+ * Github: https://github.com/Nam0101
+ * @description : ClientSocket is the class to handle the socket connection
+ */
+class ClientSocket(
+    private val gson: Gson, private val wifiManager: WifiManager
+) {
     private var streamId: String? = null
-    private var webSocket: WebSocketClient? = null
+    companion object {
+        private var webSocket: WebSocketClient? = null
+    }
+    private fun getIPAddress(): String {
+        val ipAddress = wifiManager.connectionInfo.ipAddress
+        return android.text.format.Formatter.formatIpAddress(ipAddress)
+    }
 
     init {
         Log.i("ClientSocket", "init: ")
@@ -25,21 +42,30 @@ class ClientSocket(private val gson: Gson) {
 
     fun init(streamID: String) {
         this.streamId = streamID
-        connectWebSocket()
-    }
-
-    private fun connectWebSocket() {
-        webSocket = object : WebSocketClient(URI(BuildConfig.SERVER_IP)) {
+        val serverIP = getIPAddress()
+        val server = "ws://$serverIP:3000"
+        Log.i("ClientSocket", "init: $server")
+        webSocket = object : WebSocketClient(URI(server)) {
             override fun onOpen(handshakedata: ServerHandshake?) {
-                Log.i("ClientSocket", "WebSocket Connected")
-                sendMessageToSocket(DataModel(streamId = streamId, type = DataModelType.SignIn, data = null))
+                Log.i("ClientSocket", "onOpen: $streamID server ip: ${BuildConfig.SERVER_IP}")
+                sendMessageToSocket(
+                    DataModel(
+                        streamId = streamID, DataModelType.SignIn, null
+                    )
+                )
             }
 
             override fun onMessage(message: String?) {
-                message?.let {
-                    gson.fromJson(it, DataModel::class.java)?.also { model ->
-                        listener?.onNewMessageReceived(model)
-                    }
+                val model = try {
+                    Log.i("ClientSocket", "onMessage: $message")
+                    gson.fromJson(message.toString(), DataModel::class.java)
+                } catch (e: Exception) {
+                    Log.i("TAG", "onMessage: ${e.message}")
+                    null
+                }
+                model?.let {
+                    listener?.onNewMessageReceived(it)
+
                 }
             }
 
