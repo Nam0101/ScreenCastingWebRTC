@@ -16,10 +16,13 @@ import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import nv.nam.screencastingwebrtc.webrtc.WebrtcClient
 import java.time.Duration
 
-class KtorSignalServer(private val port: Int = 3000) {
-
+class KtorSignalServer(
+    private val webrtcClient: WebrtcClient
+) {
+    private val port = 3000
     private var server: ApplicationEngine? = null
 
     data class SignalingMessage(
@@ -64,7 +67,7 @@ class KtorSignalServer(private val port: Int = 3000) {
                                 handleMessage(this, data, connections)
                                 Log.i("KtorSignalServer", "received: $data")
                             } catch (e: Exception) {
-                                println("Error parsing JSON: ${e.message}")
+                                Log.e("KtorSignalServer", "Error parsing message: $text")
                             }
                         }
 
@@ -84,6 +87,9 @@ class KtorSignalServer(private val port: Int = 3000) {
         data: SignalingMessage,
         connections: MutableMap<String, DefaultWebSocketServerSession>
     ) {
+        val host = connection.call.request.origin.remoteHost
+        Log.i("KtorSignalServer", "host: $host")
+
         when (data.type) {
             "SignIn" -> {
                 val streamId = data.streamId ?: return
@@ -91,6 +97,7 @@ class KtorSignalServer(private val port: Int = 3000) {
                 connections[streamId] = connection
             }
             "Offer", "Answer", "IceCandidates" -> {
+                Log.i("KtorSignalServer", "Offer: $data")
                 val streamId = data.streamId ?: return
                 val target = data.target ?: return
                 val targetConnection = connections[target]
@@ -101,23 +108,25 @@ class KtorSignalServer(private val port: Int = 3000) {
                 }
             }
             "WatchStream" -> {
-                println("WatchStream: $data")
-                val streamId = data.streamId ?: return
-                val clientId = data.clientId ?: return
-                val targetConnection = connections[streamId]
-                println("Client ${connection.call.request.origin.remoteHost} watching stream $streamId, $clientId")
-                if (targetConnection != null) {
-                    sendMessage(
-                        targetConnection,
-                        SignalingMessage("ViewerJoined", streamId, target = clientId)
-                    )
-                } else {
-                    Log.e("WatchStream", "Target $streamId not found.")
-                }
+//                Log.i("WatchStream", "WatchStream: $data")
+//                val streamId = data.streamId ?: return
+//                val clientId = data.clientId ?: return
+//                val targetConnection = connections[streamId]
+//                Log.i("KtorSignalServer", "WatchStream: $streamId")
+//                if (targetConnection != null) {
+//                    sendMessage(
+//                        targetConnection,
+//                        SignalingMessage("ViewerJoined", streamId, target = clientId)
+//                    )
+//                } else {
+//                    Log.e("WatchStream", "Target $streamId not found.")
+//                }
+                Log.i("StartStreaming", "StartStreaming: $data")
+                webrtcClient.call(data.target!!)
             }
             "StartStreaming" -> {
                 val streamId = data.streamId ?: return
-                println("Client ${connection.call.request.origin.remoteHost} started streaming with StreamID: $streamId")
+                Log.i("StartStreaming", "StartStreaming: $data")
                 for ((clientId, clientConnection) in connections) {
                     if (clientId != streamId) {
                         sendMessage(
@@ -126,7 +135,8 @@ class KtorSignalServer(private val port: Int = 3000) {
                     }
                 }
             }
-            else -> println("Unknown message type: ${data.type}")
+
+            else -> Log.e("KtorSignalServer", "Unknown message type: ${data.type}")
         }
     }
 
@@ -134,6 +144,11 @@ class KtorSignalServer(private val port: Int = 3000) {
         connection: DefaultWebSocketServerSession, message: SignalingMessage
     ) {
         val gson = Gson()
-        connection.send(Frame.Text(gson.toJson(message)))
+        try {
+            connection.send(Frame.Text(gson.toJson(message)))
+            Log.i("KtorSignalServer", "sent: $message")
+        } catch (e: Exception) {
+            Log.e("KtorSignalServer", "Error sending message: $message")
+        }
     }
 }

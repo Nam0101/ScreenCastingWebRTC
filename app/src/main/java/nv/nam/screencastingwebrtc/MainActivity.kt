@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
 //    private val streamId = (100000..999999).random().toString()
     private val streamId = "123456"
     private val webrtcServiceRepository: WebrtcServiceRepository by inject()
+    private val ktorSignalServer: KtorSignalServer by inject()
     private var isRecording = false
     private lateinit var audioRecord: AudioRecord
     private lateinit var audioManager: MediaProjectionManager
@@ -54,9 +55,8 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
     private fun startKtorServer() {
         CoroutineScope(Dispatchers.Default).launch {
             delay(1000)
-            val ktorSignalServer = KtorSignalServer()
             ktorSignalServer.start()
-            val ktorLocalServer = KtorLocalServer()
+            val ktorLocalServer = KtorLocalServer(getIPAddress())
             ktorLocalServer.startServer()
         }
 

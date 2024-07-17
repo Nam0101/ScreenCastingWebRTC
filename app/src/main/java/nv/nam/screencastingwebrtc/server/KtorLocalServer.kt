@@ -14,7 +14,9 @@ import io.ktor.server.routing.routing
  * Github: https://github.com/Nam0101
  * @description : KtorLocalServer is the class to handle the local server
  */
-class KtorLocalServer {
+class KtorLocalServer(
+    private val serverIp: String
+) {
     init {
         println("KtorLocalServer init")
     }
@@ -34,7 +36,7 @@ class KtorLocalServer {
    <script>
     const videoElement = document.getElementById('remoteVideo');
     const streamId = "123456"
-    const wsUrl = 'ws://10.10.11.30:3000';
+    const wsUrl = 'ws://$serverIp:3000'; 
     const connection = new WebSocket(wsUrl);
     const clientId = "viewer-1";
     let peerConnection;

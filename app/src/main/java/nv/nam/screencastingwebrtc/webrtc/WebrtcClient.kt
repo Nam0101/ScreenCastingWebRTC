@@ -148,8 +148,6 @@ class WebrtcClient(
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
-        val audioDeviceModule = JavaAudioDeviceModule.builder(context)
-            .createAudioDeviceModule() as JavaAudioDeviceModule
         val audioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             44100,

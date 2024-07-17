@@ -1,9 +1,10 @@
 package nv.nam.screencastingwebrtc
 
 import android.app.Application
-import android.util.Log
+import android.net.wifi.WifiManager
 import com.google.gson.Gson
 import nv.nam.screencastingwebrtc.repository.MainRepository
+import nv.nam.screencastingwebrtc.server.KtorSignalServer
 import nv.nam.screencastingwebrtc.service.WebrtcService
 import nv.nam.screencastingwebrtc.service.WebrtcServiceRepository
 import nv.nam.screencastingwebrtc.socket.ClientSocket
@@ -32,9 +33,6 @@ class ScreenCastingApplication : Application() {
         }
     }
     private val module = module {
-        factory {
-            ClientSocket(get())
-        }
         factory<Gson> {
             Gson()
         }
@@ -45,13 +43,19 @@ class ScreenCastingApplication : Application() {
             WebrtcServiceRepository(androidContext())
         }
         single<ClientSocket> {
-            ClientSocket(get())
+            ClientSocket(get(),get())
         }
         single<WebrtcService> {
             WebrtcService()
         }
         single<MainRepository> {
             MainRepository(get(), get(), get())
+        }
+        single<KtorSignalServer> {
+            KtorSignalServer(get())
+        }
+        single<WifiManager> {
+            applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
         }
     }
 }
