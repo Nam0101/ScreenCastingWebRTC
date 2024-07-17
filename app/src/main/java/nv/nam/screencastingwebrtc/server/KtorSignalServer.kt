@@ -1,134 +1,139 @@
 package nv.nam.screencastingwebrtc.server
 
 import android.util.Log
+import com.google.gson.Gson
+import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
+import io.ktor.server.plugins.origin
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.pingPeriod
+import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import java.time.Duration
 
-@Serializable
-data class SignalMessage(
-    val type: String,
-    val streamId: String? = null,
-    val target: String? = null,
-    val data: String? = null
-)
+class KtorSignalServer(private val port: Int = 3000) {
 
-@Serializable
-data class ViewerJoinedMessage(val type: String, val streamId: String, val target: String)
-
-@Serializable
-data class StreamStartedMessage(val type: String, val streamId: String)
-
-@Serializable
-data class ErrorMessage(val type: String, val message: String)
-
-/**
- * @author Nam Nguyen Van
- * Project: ScreenCastingWebRTC
- * Created: 12/7/2024
- * Github: https://github.com/Nam0101
- * @description :
- */
-class KtorSignalServer(
-    private val port: Int = 3000
-) {
     private var server: ApplicationEngine? = null
-    val connections = mutableMapOf<String, DefaultWebSocketServerSession>()
-    fun startServer() {
-        server = embeddedServer(CIO, port = port) {
-            install(WebSockets)
-            Log.i("KtorSignalServer", "Server started on port $port")
-            routing {
-                webSocket("/") {
-                    val thisConnection = this
-                    for (frame in incoming) {
-                        if (frame is Frame.Text) {
-                            try {
-                                val data = Json.decodeFromString<SignalMessage>(frame.readText())
-                                handleMessage(thisConnection, data)
-                            } catch (e: Exception) {
-                                println("Error parsing message: ${e.message}")
-                            }
-                        }
-                    }
 
-                    val connectionId = connections.entries.find { it.value == thisConnection }?.key
-                    if (connectionId != null) {
-                        connections.remove(connectionId)
-                        Log.i("KtorSignalServer", "Connection closed: $connectionId")
-                    }
-                }
-            }
+    data class SignalingMessage(
+        val type: String,
+        val streamId: String? = null,
+        val target: String? = null,
+        val data: String? = null,
+        val clientId: String? = null
+    )
+
+    fun start() {
+        server = embeddedServer(CIO, port) {
+            ktorSignalServer()
         }.start(wait = false)
     }
 
+    fun stop() {
+        server?.stop(1000, 5000)
+        server = null
+    }
+
+    private fun Application.ktorSignalServer() {
+        val connections = mutableMapOf<String, DefaultWebSocketServerSession>()
+        val gson = Gson()
+
+        install(WebSockets) {
+            pingPeriod = Duration.ofSeconds(15)
+            timeout = Duration.ofSeconds(15)
+            maxFrameSize = Long.MAX_VALUE
+            masking = false
+        }
+        Log.i("KtorSignalServer", "ktorSignalServer: started on port $port")
+
+        routing {
+            webSocket("/") {
+                for (frame in incoming) {
+                    when (frame) {
+                        is Frame.Text -> {
+                            val text = frame.readText()
+                            try {
+                                val data = gson.fromJson(text, SignalingMessage::class.java)
+                                handleMessage(this, data, connections)
+                                Log.i("KtorSignalServer", "received: $data")
+                            } catch (e: Exception) {
+                                println("Error parsing JSON: ${e.message}")
+                            }
+                        }
+
+                        else -> {}
+                    }
+                }
+                val streamId = connections.entries.find { it.value == this }?.key
+                if (streamId != null) {
+                    connections.remove(streamId)
+                }
+            }
+        }
+    }
+
     private suspend fun handleMessage(
-        connection: DefaultWebSocketServerSession, data: SignalMessage
+        connection: DefaultWebSocketServerSession,
+        data: SignalingMessage,
+        connections: MutableMap<String, DefaultWebSocketServerSession>
     ) {
         when (data.type) {
             "SignIn" -> {
-                val streamId = data.streamId
-                if (streamId != null) {
-                    connections[streamId] = connection
-                }
+                val streamId = data.streamId ?: return
+                Log.i("KtorSignalServer", "SignIn: $data")
+                connections[streamId] = connection
             }
-
             "Offer", "Answer", "IceCandidates" -> {
-                val targetConnection = data.target?.let { connections[it] }
+                val streamId = data.streamId ?: return
+                val target = data.target ?: return
+                val targetConnection = connections[target]
                 if (targetConnection != null) {
                     sendMessage(targetConnection, data)
-                    Log.i("KtorSignalServer", "Message sent to: ${data.target}")
                 } else {
-                    Log.i("KtorSignalServer", "Connection not found: ${data.target}")
+                    Log.e("KtorSignalServer", "Target $target not found.")
                 }
             }
-
             "WatchStream" -> {
-                val streamId = data.streamId
-                val clientId = data.target
-                val targetConnection = streamId?.let { connections[it] }
+                println("WatchStream: $data")
+                val streamId = data.streamId ?: return
+                val clientId = data.clientId ?: return
+                val targetConnection = connections[streamId]
+                println("Client ${connection.call.request.origin.remoteHost} watching stream $streamId, $clientId")
                 if (targetConnection != null) {
                     sendMessage(
                         targetConnection,
-                        ViewerJoinedMessage("ViewerJoined", streamId, clientId ?: "unknown")
+                        SignalingMessage("ViewerJoined", streamId, target = clientId)
                     )
                 } else {
-                    sendMessage(connection, ErrorMessage("Error", "Stream not found"))
+                    Log.e("WatchStream", "Target $streamId not found.")
                 }
             }
-
             "StartStreaming" -> {
-                val streamId = data.streamId
-                if (streamId != null) {
-                    for (clientId in connections.keys) {
-                        if (clientId != streamId) {
-                            val clientConnection = connections[clientId]
-                            if (clientConnection != null) {
-                                sendMessage(
-                                    clientConnection,
-                                    StreamStartedMessage("StreamStarted", streamId)
-                                )
-                            }
-                        }
+                val streamId = data.streamId ?: return
+                println("Client ${connection.call.request.origin.remoteHost} started streaming with StreamID: $streamId")
+                for ((clientId, clientConnection) in connections) {
+                    if (clientId != streamId) {
+                        sendMessage(
+                            clientConnection, SignalingMessage("StreamStarted", streamId = streamId)
+                        )
                     }
                 }
             }
-
             else -> println("Unknown message type: ${data.type}")
         }
     }
 
-    private suspend fun sendMessage(connection: DefaultWebSocketServerSession, message: Any) {
-        connection.send(Frame.Text(Json.encodeToString(message)))
+    private suspend fun sendMessage(
+        connection: DefaultWebSocketServerSession, message: SignalingMessage
+    ) {
+        val gson = Gson()
+        connection.send(Frame.Text(gson.toJson(message)))
     }
 }

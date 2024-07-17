@@ -54,14 +54,12 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
     private fun startKtorServer() {
         CoroutineScope(Dispatchers.Default).launch {
             delay(1000)
+            val ktorSignalServer = KtorSignalServer()
+            ktorSignalServer.start()
             val ktorLocalServer = KtorLocalServer()
             ktorLocalServer.startServer()
         }
-        CoroutineScope(Dispatchers.Default).launch {
-            val ktorSignalServer = KtorSignalServer()
-            ktorSignalServer.startServer()
-            Log.i(TAG, "startKtorServer: ")
-        }
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
