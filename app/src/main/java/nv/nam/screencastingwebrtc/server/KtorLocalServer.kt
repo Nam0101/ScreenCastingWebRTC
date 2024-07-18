@@ -27,7 +27,7 @@ class KtorLocalServer(
 
 <head>
     <title>WebRTC Viewer</title>
-</head>
+</head> 
 
 <body>
     <h1>WebRTC Viewer</h1>

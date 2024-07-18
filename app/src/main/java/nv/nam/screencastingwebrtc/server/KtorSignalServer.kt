@@ -20,7 +20,8 @@ import nv.nam.screencastingwebrtc.webrtc.WebrtcClient
 import java.time.Duration
 
 class KtorSignalServer(
-    private val webrtcClient: WebrtcClient
+    private val webrtcClient: WebrtcClient,
+    private val gson: Gson
 ) {
     private val port = 3000
     private var server: ApplicationEngine? = null
@@ -143,7 +144,6 @@ class KtorSignalServer(
     private suspend fun sendMessage(
         connection: DefaultWebSocketServerSession, message: SignalingMessage
     ) {
-        val gson = Gson()
         try {
             connection.send(Frame.Text(gson.toJson(message)))
             Log.i("KtorSignalServer", "sent: $message")

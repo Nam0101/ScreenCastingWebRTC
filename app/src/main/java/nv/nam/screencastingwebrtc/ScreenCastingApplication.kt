@@ -52,7 +52,7 @@ class ScreenCastingApplication : Application() {
             MainRepository(get(), get(), get())
         }
         single<KtorSignalServer> {
-            KtorSignalServer(get())
+            KtorSignalServer(get(), get())
         }
         single<WifiManager> {
             applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
