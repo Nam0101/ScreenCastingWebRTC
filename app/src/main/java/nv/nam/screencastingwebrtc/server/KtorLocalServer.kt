@@ -74,10 +74,16 @@ class KtorLocalServer(
 
     async function handleOffer(offerSdp) {
             console.log("Received offer SDP:", offerSdp); // Debug log
+            const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ],
+//            bundlePolicy: 'max-bundle',  
+//            rtcpMuxPolicy: 'require',     
+//            sdpSemantics: 'unified-plan'  
+        };
 
-            peerConnection = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Example STUN server
-            });
+            peerConnection = new RTCPeerConnection(configuration);
             peerConnection.onicecandidate = handleIceCandidateEvent;
             peerConnection.ontrack = handleTrackEvent;
 

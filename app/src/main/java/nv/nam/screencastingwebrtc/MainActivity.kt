@@ -3,8 +3,8 @@ package nv.nam.screencastingwebrtc
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.media.AudioRecord
 import android.media.projection.MediaProjectionManager
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,7 +13,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nv.nam.screencastingwebrtc.databinding.ActivityMainBinding
@@ -36,15 +35,11 @@ import org.webrtc.MediaStream
  */
 class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener {
     private var binding: ActivityMainBinding? = null
-//    private val streamId = (100000..999999).random().toString()
     private val streamId = "123456"
     private val webrtcServiceRepository: WebrtcServiceRepository by inject()
     private val ktorSignalServer: KtorSignalServer by inject()
     private var isRecording = false
-    private lateinit var audioRecord: AudioRecord
-    private lateinit var audioManager: MediaProjectionManager
-    private val recordingCoroutine = Dispatchers.IO + Job()
-
+    private val wifiManager: WifiManager by inject()
     companion object {
         private const val TAG = "MainActivity"
         private val REQUEST_SCREEN_CAPTURE = 101
@@ -143,7 +138,6 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
     }
 
     private fun getIPAddress(): String {
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
         val ipAddress = wifiManager.connectionInfo.ipAddress
         return android.text.format.Formatter.formatIpAddress(ipAddress)
     }
