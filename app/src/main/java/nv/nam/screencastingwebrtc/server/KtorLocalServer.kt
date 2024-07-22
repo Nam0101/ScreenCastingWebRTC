@@ -2,6 +2,7 @@ package nv.nam.screencastingwebrtc.server
 
 import io.ktor.server.application.call
 import io.ktor.server.cio.CIO
+import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
@@ -15,7 +16,7 @@ import io.ktor.server.routing.routing
  * @description : KtorLocalServer is the class to handle the local server
  */
 class KtorLocalServer(
-    private val serverIp: String
+    serverIp: String
 ) {
     init {
         println("KtorLocalServer init")
@@ -31,14 +32,15 @@ class KtorLocalServer(
 
 <body>
     <h1>WebRTC Viewer</h1>
-    <video id="remoteVideo" autoplay playsinline controls></video>
-
+    <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline controls></video>
+    </div>
    <script>
     const videoElement = document.getElementById('remoteVideo');
-    const streamId = "123456"
+    const streamId = "streamer"
     const wsUrl = 'ws://$serverIp:3000'; 
     const connection = new WebSocket(wsUrl);
-    const clientId = "viewer-1";
+    const clientId = "viewer";
     let peerConnection;
     let remoteStream = new MediaStream();
 
@@ -132,18 +134,24 @@ class KtorLocalServer(
         remoteStream.addTrack(event.track);
     }
 </script>
+
 </body>
 
 </html>
     """.trimIndent()
-
-    fun startServer() {
-        embeddedServer(CIO, port = 8080) { // Use CIO engine
-            routing {
-                get("/") {
-                    call.respondText(HTML , contentType = io.ktor.http.ContentType.Text.Html)
-                }
+    private val server: ApplicationEngine = embeddedServer(CIO, port = 8080) { // Use CIO engine
+        routing {
+            get("/") {
+                call.respondText(HTML, contentType = io.ktor.http.ContentType.Text.Html)
             }
-        }.start(wait = false)
+        }
     }
+    fun startServer() {
+        server.start(wait = false)
+    }
+
+    fun stopServer() {
+        server.stop(0, 0)
+    }
+
 }

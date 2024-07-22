@@ -35,9 +35,10 @@ import org.webrtc.MediaStream
  */
 class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener {
     private var binding: ActivityMainBinding? = null
-    private val streamId = "123456"
+    private val streamId = "streamer"
     private val webrtcServiceRepository: WebrtcServiceRepository by inject()
     private val ktorSignalServer: KtorSignalServer by inject()
+    private var ktorLocalServer: KtorLocalServer? = null
     private var isRecording = false
     private val wifiManager: WifiManager by inject()
     companion object {
@@ -51,10 +52,9 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
         CoroutineScope(Dispatchers.Default).launch {
             delay(1000)
             ktorSignalServer.start()
-            val ktorLocalServer = KtorLocalServer(getIPAddress())
-            ktorLocalServer.startServer()
+            ktorLocalServer = KtorLocalServer(getIPAddress())
+            ktorLocalServer?.startServer()
         }
-
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,6 +94,8 @@ class MainActivity : AppCompatActivity(), KoinComponent, MainRepository.Listener
             webrtcServiceRepository.stopIntent()
             isRecording = false
             Log.i(TAG, "onCreate: stop")
+            ktorSignalServer.stop()
+            ktorLocalServer?.stopServer()
         }
     }
 

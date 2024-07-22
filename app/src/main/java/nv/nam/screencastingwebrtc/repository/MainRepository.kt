@@ -30,7 +30,7 @@ class MainRepository(
         Log.i("MainRepository", "init: ")
     }
     private lateinit var streamId: String
-    private val target: String = "viewer-1"
+    private val target: String = "viewer"
     private lateinit var surfaceView: SurfaceViewRenderer
     var listener: Listener? = null
 

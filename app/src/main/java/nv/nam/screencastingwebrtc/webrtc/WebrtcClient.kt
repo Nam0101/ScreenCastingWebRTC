@@ -129,7 +129,7 @@ class WebrtcClient(
             surfaceTextureHelper, context, localVideoSource.capturerObserver
         )
 //        screenCapturer!!.startCapture(screenWidthPixels, screenHeightPixels, 24)
-        screenCapturer!!.startCapture(reducedWidth, reducedHeight, 20)
+        screenCapturer!!.startCapture(reducedWidth, reducedHeight, 24)
 
         localVideoTrack =
             peerConnectionFactory.createVideoTrack(localTrackId + "_video", localVideoSource)
@@ -143,8 +143,8 @@ class WebrtcClient(
         peerConnection?.addStream(localStream)
 
 
-//        peerConnection?.setBitrate(1000000, 1000000, 1000000)
-//        peerConnection?.setAudioRecording(true)
+        peerConnection?.setBitrate(300000, 1000000, 2500000)
+        peerConnection?.setAudioRecording(true)
 //        peerConnection?.setAudioPlayout(true)
 //        peerConnection?.startRtcEventLog(100, 100)
     }
@@ -166,7 +166,7 @@ class WebrtcClient(
             minBufferSize
         )
 
-        audioSource = peerConnectionFactory.createAudioSource(MediaConstraints())
+        audioSource = peerConnectionFactory.createAudioSource(mediaConstraint)
         localAudioTrack = peerConnectionFactory.createAudioTrack(audioTrackId, audioSource)
 
         isRecording = true
@@ -197,17 +197,22 @@ class WebrtcClient(
     }
 
     private fun createPeerConnectionFactory(): PeerConnectionFactory {
+        val options = PeerConnectionFactory.InitializationOptions.builder(context)
+            .setEnableInternalTracer(true)
+            .setFieldTrials("WebRTC-SupportAV1/Enabled/")
+            .setEnableInternalTracer(false)
+            .createInitializationOptions()
+        PeerConnectionFactory.initialize(options)
+
         return PeerConnectionFactory.builder()
             .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBaseContext))
-            .setVideoEncoderFactory(DefaultVideoEncoderFactory(
-                eglBaseContext, true, true
-            ).apply {
-                supportedCodecs.sortedByDescending { it.name == "AV1" }
-            }).setOptions(PeerConnectionFactory.Options().apply {
+            .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBaseContext, true, true))
+            .setOptions(PeerConnectionFactory.Options().apply {
                 disableEncryption = false
                 disableNetworkMonitor = false
             }).createPeerConnectionFactory()
     }
+
 
     private fun createPeerConnection(observer: Observer): PeerConnection? {
         return peerConnectionFactory.createPeerConnection(
